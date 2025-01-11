@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .middlewares.api_error_middleware import APIErrorMiddleware
 from .routers import auth_router, users_router
+from .routers.ai import router as ai_router
 
 app = FastAPI()
 
@@ -13,6 +14,7 @@ app.add_middleware(APIErrorMiddleware)
 
 app.include_router(router=users_router)
 app.include_router(router=auth_router)
+app.include_router(router=ai_router)
 
 
 @app.get("/")

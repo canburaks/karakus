@@ -5,7 +5,7 @@ import httpx
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from pydantic import BaseModel
 
-from api.services.openrouter.config import MODEL_CONFIGS, OpenRouterModel
+from api.services.openrouter.config import MODEL_CONFIGS, OpenRouterModel, get_openrouter_settings
 
 
 class OpenRouterConfig(BaseModel):
@@ -15,21 +15,23 @@ class OpenRouterConfig(BaseModel):
 
 
 class OpenRouterService:
-    def __init__(self, config: OpenRouterConfig):
-        self.config = config
+    def __init__(self):
+        settings = get_openrouter_settings()
         self.client = httpx.AsyncClient(
-            base_url=config.base_url,
+            base_url=settings.OPENROUTER_BASE_URL,
             headers={
-                "Authorization": f"Bearer {config.api_key}",
+                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
                 "HTTP-Referer": "http://localhost:3000",
                 "X-Title": "AI SDK Python Streaming",
             },
             timeout=60.0,
         )
+        self.default_model = OpenRouterModel.QWEN_70B
 
     async def create_embeddings(
         self, texts: List[str], model: str = "openai/text-embedding-3-small"
     ) -> List[List[float]]:
+        
         response = await self.client.post(
             "/embeddings", json={"model": model, "input": texts}
         )
@@ -42,7 +44,7 @@ class OpenRouterService:
         model: Optional[OpenRouterModel] = None,
         tools: Optional[List[dict]] = None,
     ) -> AsyncGenerator[str, None]:
-        selected_model = model or self.config.default_model
+        selected_model = model or self.default_model
         model_config = MODEL_CONFIGS[selected_model]
 
         if tools and not model_config["supports_tools"]:
@@ -102,5 +104,5 @@ class OpenRouterService:
         await self.client.aclose()
 
 
-def get_openrouter_service(config: OpenRouterConfig) -> OpenRouterService:
-    return OpenRouterService(config)
+def get_openrouter_service() -> OpenRouterService:
+    return OpenRouterService()
