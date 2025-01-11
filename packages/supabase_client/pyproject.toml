@@ -1,0 +1,19 @@
+[project]
+name = "supabase-client"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Can Burak Sofyalıoğlu", email = "cbsofyalioglu@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "supabase>=2.11.0",
+]
+
+[project.scripts]
+supabase-client = "supabase_client:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

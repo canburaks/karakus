@@ -1,0 +1,6 @@
+DEBUG    httpx:_config.py:82 load_ssl_context verify=True cert=None trust_env=True http2=False
+DEBUG    httpx:_config.py:148 load_verify_locations cafile='/Users/canburaksofyalioglu/Github/karakus/.venv/lib/python3.12/site-packages/certifi/cacert.pem'
+DEBUG    httpx:_config.py:82 load_ssl_context verify=True cert=None trust_env=True http2=False
+DEBUG    httpx:_config.py:148 load_verify_locations cafile='/Users/canburaksofyalioglu/Github/karakus/.venv/lib/python3.12/site-packages/certifi/cacert.pem'
+DEBUG    httpx:_config.py:82 load_ssl_context verify=True cert=None trust_env=True http2=False
+DEBUG    httpx:_config.py:148 load_verify_locations cafile='/Users/canburaksofyalioglu/Github/karakus/.venv/lib/python3.12/site-packages/certifi/cacert.pem'
