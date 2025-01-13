@@ -7,6 +7,7 @@ from sentence_transformers import SentenceTransformer
 from transformers import AutoModel, AutoTokenizer
 
 from api.core.logger import log
+
 from .config import HuggingFaceConfig, get_huggingface_settings
 
 
@@ -14,7 +15,7 @@ class HuggingFaceService:
     """
     Service class for handling HuggingFace model operations including embeddings generation
     using both API and local models. Supports sentence transformers and regular transformers.
-    
+
     Attributes:
         config (HuggingFaceConfig): Configuration for the service
         client (httpx.AsyncClient): Async client for API calls
@@ -26,7 +27,7 @@ class HuggingFaceService:
     def __init__(self, config: HuggingFaceConfig):
         """
         Initialize the HuggingFace service with given configuration.
-        
+
         Args:
             config (HuggingFaceConfig): Service configuration including API keys and model settings
         """
@@ -43,7 +44,7 @@ class HuggingFaceService:
     async def initialize_local_model(self, model_name: Optional[str] = None):
         """
         Initialize a local transformer model and tokenizer.
-        
+
         Args:
             model_name (Optional[str]): Name of the model to initialize. Uses default from config if None.
         """
@@ -54,7 +55,7 @@ class HuggingFaceService:
     def initialize_sentence_transformer(self, model_name: Optional[str] = None):
         """
         Initialize a local sentence transformer model.
-        
+
         Args:
             model_name (Optional[str]): Name of the model to initialize. Uses default from config if None.
         """
@@ -66,14 +67,14 @@ class HuggingFaceService:
     ) -> List[List[float]]:
         """
         Get embeddings using HuggingFace's API endpoint.
-        
+
         Args:
             texts (List[str]): List of texts to get embeddings for
             model (Optional[str]): Model to use for embeddings. Uses default from config if None.
-            
+
         Returns:
             List[List[float]]: List of embeddings vectors
-            
+
         Raises:
             ValueError: If API response structure is unexpected
             httpx.HTTPError: If API request fails
@@ -93,25 +94,29 @@ class HuggingFaceService:
         elif isinstance(data, dict) and "embeddings" in data:
             embeddings = validate_and_convert(data["embeddings"])
         else:
-            raise ValueError(f"Unexpected API response structure from model {model_name}")
+            raise ValueError(
+                f"Unexpected API response structure from model {model_name}"
+            )
 
         return embeddings
 
     def get_embeddings_local(self, texts: List[str]) -> List[List[float]]:
         """
         Get embeddings using a local transformer model.
-        
+
         Args:
             texts (List[str]): List of texts to get embeddings for
-            
+
         Returns:
             List[List[float]]: List of embeddings vectors
-            
+
         Raises:
             ValueError: If model is not initialized
         """
         if not self.model or not self.tokenizer:
-            raise ValueError("Model not initialized. Call initialize_local_model first.")
+            raise ValueError(
+                "Model not initialized. Call initialize_local_model first."
+            )
 
         encoded_input = self.tokenizer(
             texts, padding=True, truncation=True, return_tensors="pt"
@@ -124,13 +129,13 @@ class HuggingFaceService:
     def get_sentence_embeddings(self, texts: List[str] | str) -> List[List[float]]:
         """
         Get embeddings using a local sentence transformer model.
-        
+
         Args:
             texts (Union[List[str], str]): Single text or list of texts to get embeddings for
-            
+
         Returns:
             List[List[float]]: List of embeddings vectors
-            
+
         Raises:
             ValueError: If sentence transformer is not initialized
         """
@@ -158,10 +163,10 @@ _huggingface_instance = None
 def get_huggingface_service(config: HuggingFaceConfig) -> HuggingFaceService:
     """
     Get or create a singleton instance of HuggingFaceService.
-    
+
     Args:
         config (HuggingFaceConfig): Service configuration
-        
+
     Returns:
         HuggingFaceService: Singleton service instance
     """

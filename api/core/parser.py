@@ -12,13 +12,13 @@ md = MarkItDown()
 async def parse_pdf(file: UploadFile) -> str:
     """
     Parse PDF file and extract text content.
-    
+
     Args:
         file (UploadFile): Uploaded PDF file
-        
+
     Returns:
         str: Extracted text content
-        
+
     Raises:
         HTTPException: If PDF parsing fails
     """
@@ -48,10 +48,10 @@ async def parse_pdf(file: UploadFile) -> str:
 async def read_text_file(file: UploadFile) -> str:
     """
     Read and decode text file content.
-    
+
     Args:
         file (UploadFile): Uploaded text file
-        
+
     Returns:
         str: Decoded text content
     """

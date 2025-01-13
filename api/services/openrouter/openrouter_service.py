@@ -17,12 +17,13 @@ from .config import OpenRouterConfig
 class ToolCall(TypedDict):
     """
     Type definition for tool calls in chat completions.
-    
+
     Attributes:
         id (str): Unique identifier for the tool call
         name (str): Name of the tool being called
         arguments (str): JSON string of arguments for the tool
     """
+
     id: str
     name: str
     arguments: str
@@ -31,10 +32,10 @@ class ToolCall(TypedDict):
 class OpenRouterService:
     """
     Service for interacting with OpenRouter's API, providing access to various AI models.
-    
+
     Handles chat completions and embeddings generation with support for streaming
     and tool calls.
-    
+
     Attributes:
         client (httpx.AsyncClient): Async client for API requests
         default_model (OpenRouterModel): Default model to use for requests
@@ -57,14 +58,14 @@ class OpenRouterService:
     ) -> List[List[float]]:
         """
         Generate embeddings for given texts using specified model.
-        
+
         Args:
             texts (List[str]): List of texts to generate embeddings for
             model (str): Model to use for embedding generation
-            
+
         Returns:
             List[List[float]]: List of embedding vectors
-            
+
         Raises:
             httpx.HTTPError: If API request fails
         """
@@ -82,15 +83,15 @@ class OpenRouterService:
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat completions with optional tool support.
-        
+
         Args:
             messages (List[ChatCompletionMessageParam]): Chat messages
             model (Optional[OpenRouterModel]): Model to use
             tools (Optional[List[dict]]): List of tools available to the model
-            
+
         Yields:
             str: Chunks of the response in a streaming format
-            
+
         Raises:
             ValueError: If model doesn't support tools but tools are provided
             httpx.HTTPError: If API request fails

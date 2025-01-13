@@ -1,20 +1,24 @@
 from typing import Union
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .middlewares.api_error_middleware import APIErrorMiddleware
+from .middlewares.auth_middleware import verify_token_balance
 from .routers import auth_router, users_router
 from .routers.ai import router as ai_router
+from .routers.lemonsqueezy import router as lemonsqueezy_router
 
 app = FastAPI()
 
 app.add_middleware(APIErrorMiddleware)
 
-app.include_router(router=users_router)
+# Add authentication to all routes except auth and webhooks
 app.include_router(router=auth_router)
-app.include_router(router=ai_router)
+app.include_router(router=lemonsqueezy_router)  # Webhooks don't need auth
+app.include_router(router=users_router, dependencies=[Depends(verify_token_balance)])
+app.include_router(router=ai_router, dependencies=[Depends(verify_token_balance)])
 
 
 @app.get("/")

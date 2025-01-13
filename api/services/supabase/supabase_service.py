@@ -14,10 +14,10 @@ from supabase.lib.client_options import SyncClientOptions
 class SupabaseService:
     """
     Service for interacting with Supabase, handling authentication and vector operations.
-    
+
     Provides methods for user management, token handling, and vector similarity search
     using Supabase's vector extension.
-    
+
     Attributes:
         client (Client): Supabase client instance
     """
@@ -32,13 +32,13 @@ class SupabaseService:
     async def sign_up(self, user_data: SignUpRequest) -> GoTrueAuthResponse:
         """
         Register a new user with Supabase.
-        
+
         Args:
             user_data (SignUpRequest): User registration data
-            
+
         Returns:
             GoTrueAuthResponse: Authentication response with user and session
-            
+
         Raises:
             HTTPException: If registration fails
         """
@@ -65,13 +65,13 @@ class SupabaseService:
     async def sign_in(self, credentials: SignInRequest) -> GoTrueAuthResponse:
         """
         Authenticate user with email and password.
-        
+
         Args:
             credentials (SignInRequest): User login credentials
-            
+
         Returns:
             GoTrueAuthResponse: Authentication response with user and session
-            
+
         Raises:
             HTTPException: If authentication fails
         """
@@ -127,10 +127,10 @@ class SupabaseService:
     def get_embeddings_collection(self, collection_name: str):
         """
         Retrieve embeddings from a named collection.
-        
+
         Args:
             collection_name (str): Name of the collection to query
-            
+
         Returns:
             Any: Collection data from Supabase
         """
@@ -148,13 +148,13 @@ class SupabaseService:
     ):
         """
         Insert or update embeddings in a collection.
-        
+
         Args:
             collection_name (str): Target collection name
             embeddings (list[float]): Embedding vector
             metadata (dict): Additional metadata
             id (Optional[str]): Unique identifier for the embedding
-            
+
         Returns:
             Any: Response from Supabase
         """
@@ -178,13 +178,13 @@ class SupabaseService:
     ):
         """
         Search for similar embeddings in a collection.
-        
+
         Args:
             collection_name (str): Collection to search in
             query_embedding (list[float]): Query vector
             similarity_threshold (float): Minimum similarity score
             match_count (int): Maximum number of matches to return
-            
+
         Returns:
             Any: Matching embeddings from Supabase
         """
