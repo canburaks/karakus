@@ -24,3 +24,4 @@ uv.lock
 *.code-workspace
 **/logs/*
 *.log
+.cursortasks
