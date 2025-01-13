@@ -8,11 +8,8 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.10.4",
     "fastapi[standard]>=0.115.6",
-    "supabase_client",
     "pydantic-settings>=2.7.1",
     "loguru>=0.7.3",
-    "supabase_client",
-    "agents",
     "rich>=13.9.4",
     "sentence-transformers>=3.3.1",
     "numpy>=2.2.1",
@@ -35,9 +32,6 @@ dev = [
 [tool.uv.workspace]
 members = ["packages/*"]
 
-[tool.uv.sources]
-agents = { workspace = true }
-supabase_client = { workspace = true }
 
 [tool.ruff]
 # Group violations by containing file.
@@ -75,9 +69,10 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-log_file = "static/tests.log"
+log_file = "static/assets/logs/tests.log"
 console_output_style = "count"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::FutureWarning",
 ]
+asyncio_default_fixture_loop_scope = "function"  # or "class", "module", etc.

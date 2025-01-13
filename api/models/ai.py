@@ -41,4 +41,4 @@ class ChatResponse(BaseModel):
     model: str
     created: int
     choices: List[dict]
-    usage: dict 
+    usage: dict

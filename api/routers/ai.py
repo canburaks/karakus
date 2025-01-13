@@ -5,6 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
+from api.core.parser import parse_pdf, read_text_file
 from api.models.ai import (
     ChatRequest,
     ChatResponse,
@@ -14,8 +15,6 @@ from api.models.ai import (
     Role,
 )
 from api.services.openrouter import get_openrouter_service
-from api.core.parser import parse_pdf, read_text_file
-
 
 router = APIRouter(
     prefix="/ai",
@@ -55,7 +54,7 @@ async def create_chat_completion(
             messages=[msg.model_dump() for msg in messages],
             model=request.model,
         )
-        
+
         # Collect all chunks
         content = ""
         async for chunk in response:
@@ -131,4 +130,4 @@ async def create_embeddings(
             usage={"total_tokens": len(input_text.split())},  # Approximate
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))

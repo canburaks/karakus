@@ -1,37 +1,73 @@
 import json
-from typing import AsyncGenerator, List, Optional
+from typing import AsyncGenerator, List, Optional, TypedDict
 
 import httpx
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from pydantic import BaseModel
 
-from api.services.openrouter.config import MODEL_CONFIGS, OpenRouterModel, get_openrouter_settings
+from api.services.openrouter.config import (
+    MODEL_CONFIGS,
+    OpenRouterModel,
+    get_openrouter_settings,
+)
+
+from .config import OpenRouterConfig
 
 
-class OpenRouterConfig(BaseModel):
-    api_key: str
-    base_url: str = "https://openrouter.ai/api/v1"
-    default_model: OpenRouterModel = OpenRouterModel.QWEN_70B
+class ToolCall(TypedDict):
+    """
+    Type definition for tool calls in chat completions.
+    
+    Attributes:
+        id (str): Unique identifier for the tool call
+        name (str): Name of the tool being called
+        arguments (str): JSON string of arguments for the tool
+    """
+    id: str
+    name: str
+    arguments: str
 
 
 class OpenRouterService:
-    def __init__(self):
-        settings = get_openrouter_settings()
+    """
+    Service for interacting with OpenRouter's API, providing access to various AI models.
+    
+    Handles chat completions and embeddings generation with support for streaming
+    and tool calls.
+    
+    Attributes:
+        client (httpx.AsyncClient): Async client for API requests
+        default_model (OpenRouterModel): Default model to use for requests
+    """
+
+    def __init__(self, config: OpenRouterConfig):
         self.client = httpx.AsyncClient(
-            base_url=settings.OPENROUTER_BASE_URL,
+            base_url=config.base_url,
             headers={
-                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {config.api_key}",
                 "HTTP-Referer": "http://localhost:3000",
                 "X-Title": "AI SDK Python Streaming",
             },
             timeout=60.0,
         )
-        self.default_model = OpenRouterModel.QWEN_70B
+        self.default_model = config.default_model
 
     async def create_embeddings(
         self, texts: List[str], model: str = "openai/text-embedding-3-small"
     ) -> List[List[float]]:
+        """
+        Generate embeddings for given texts using specified model.
         
+        Args:
+            texts (List[str]): List of texts to generate embeddings for
+            model (str): Model to use for embedding generation
+            
+        Returns:
+            List[List[float]]: List of embedding vectors
+            
+        Raises:
+            httpx.HTTPError: If API request fails
+        """
         response = await self.client.post(
             "/embeddings", json={"model": model, "input": texts}
         )
@@ -44,6 +80,21 @@ class OpenRouterService:
         model: Optional[OpenRouterModel] = None,
         tools: Optional[List[dict]] = None,
     ) -> AsyncGenerator[str, None]:
+        """
+        Stream chat completions with optional tool support.
+        
+        Args:
+            messages (List[ChatCompletionMessageParam]): Chat messages
+            model (Optional[OpenRouterModel]): Model to use
+            tools (Optional[List[dict]]): List of tools available to the model
+            
+        Yields:
+            str: Chunks of the response in a streaming format
+            
+        Raises:
+            ValueError: If model doesn't support tools but tools are provided
+            httpx.HTTPError: If API request fails
+        """
         selected_model = model or self.default_model
         model_config = MODEL_CONFIGS[selected_model]
 
@@ -59,7 +110,7 @@ class OpenRouterService:
             "POST", "/chat/completions", json=payload
         ) as response:
             response.raise_for_status()
-            draft_tool_calls = []
+            draft_tool_calls: List[ToolCall] = []
             draft_tool_calls_index = -1
 
             async for line in response.aiter_lines():
@@ -104,5 +155,5 @@ class OpenRouterService:
         await self.client.aclose()
 
 
-def get_openrouter_service() -> OpenRouterService:
-    return OpenRouterService()
+def get_openrouter_service(config: OpenRouterConfig) -> OpenRouterService:
+    return OpenRouterService(config)

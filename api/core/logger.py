@@ -21,7 +21,3 @@ logging.basicConfig(
 # logging.getLogger("uvicorn.error").handlers = [rich_handler]
 
 log = logging.getLogger("rich")
-
-
-__builtins__["log"] = log
-__builtins__["print"] = print

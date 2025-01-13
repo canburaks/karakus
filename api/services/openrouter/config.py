@@ -2,6 +2,7 @@ from enum import Enum
 from functools import lru_cache
 from typing import Any, Dict
 
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 
@@ -54,6 +55,7 @@ MODEL_CONFIGS: Dict[OpenRouterModel, Dict[str, Any]] = {
 class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_DEFAULT_MODEL: OpenRouterModel = OpenRouterModel.QWEN_70B
 
     class Config:
         env_file = ".env"
@@ -62,6 +64,23 @@ class Settings(BaseSettings):
         extra = "ignore"  # Allow extra fields for testing
 
 
+openrouter_env_vars = Settings()
+
+
+class OpenRouterConfig(BaseModel):
+    api_key: str
+    base_url: str = "https://openrouter.ai/api/v1"
+    default_model: OpenRouterModel = OpenRouterModel.QWEN_70B
+
+
 @lru_cache()
-def get_openrouter_settings() -> Settings:
-    return Settings()
+def get_openrouter_settings(
+    api_key: str = openrouter_env_vars.OPENROUTER_API_KEY,
+    base_url: str = openrouter_env_vars.OPENROUTER_BASE_URL,
+    default_model: OpenRouterModel = openrouter_env_vars.OPENROUTER_DEFAULT_MODEL,
+) -> OpenRouterConfig:
+    return OpenRouterConfig(
+        api_key=api_key,
+        base_url=base_url,
+        default_model=default_model,
+    )

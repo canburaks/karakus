@@ -5,6 +5,16 @@ from pydantic import BaseModel, EmailStr
 
 
 class SignUpRequest(BaseModel):
+    """
+    Request model for user registration.
+    
+    Attributes:
+        email (EmailStr): User's email address
+        password (str): User's password
+        phone (Optional[str]): Optional phone number
+        options (Optional[dict]): Additional signup options
+        metadata (Optional[dict]): User metadata
+    """
     email: EmailStr
     password: str
     phone: Optional[str] = None
@@ -13,6 +23,15 @@ class SignUpRequest(BaseModel):
 
 
 class SignInRequest(BaseModel):
+    """
+    Request model for user authentication.
+    
+    Attributes:
+        email (EmailStr): User's email address
+        password (str): User's password
+        options (Optional[dict]): Additional signin options
+        metadata (Optional[dict]): Session metadata
+    """
     email: EmailStr
     password: str
     options: Optional[dict] = None
@@ -38,6 +57,19 @@ class TokenResponse(BaseModel):
 
 
 class SupabaseUser(BaseModel):
+    """
+    Model representing a Supabase user.
+    
+    Attributes:
+        id (str): Unique user identifier
+        app_metadata (Dict[str, Any]): Application-specific metadata
+        user_metadata (Dict[str, Any]): User-specific metadata
+        email (Optional[str]): User's email address
+        phone (Optional[str]): User's phone number
+        created_at (datetime): Account creation timestamp
+        role (Optional[str]): User's role
+        is_anonymous (bool): Whether user is anonymous
+    """
     id: str
     app_metadata: Dict[str, Any]
     user_metadata: Dict[str, Any]
