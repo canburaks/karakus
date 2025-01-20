@@ -1,0 +1,129 @@
+{
+      "kanun_adi": {
+        "title": "Kanun Adi",
+        "type": "string"
+      },
+      "kanun_numarasi": {
+        "title": "Kanun Numarasi",
+        "type": "integer"
+      },
+      "resmi_gazete_yayin_tarihi": {
+        "title": "Resmi Gazete Yayin Tarihi",
+        "type": "string"
+      },
+      "maddeler": {
+        "items": {
+          "properties": {
+            "madde_no": {
+              "description": "Kanun maddesinin numarası",
+              "title": "Madde No",
+              "type": "integer"
+            },
+            "madde_basligi": {
+              "description": "Kanun maddesinin başlığı",
+              "title": "Madde Basligi",
+              "type": "string"
+            },
+            "madde_metni": {
+              "description": "Kanun maddesinin metni",
+              "title": "Madde Metni",
+              "type": "string"
+            },
+            "madde_ozeti": {
+              "description": "Kanun maddesinin özeti",
+              "title": "Madde Ozeti",
+              "type": "string"
+            },
+            "madde_amac": {
+              "description": "Kanun maddesinin amacı",
+              "title": "Madde Amac",
+              "type": "string"
+            },
+            "kitap_no": {
+              "description": "Kanun metni içerisinde kitap olarak ayrılmış kısmın numarası",
+              "title": "Kitap No",
+              "type": "integer"
+            },
+            "kitap_adi": {
+              "description": "Kanun metni içerisinde kitap olarak ayrılmış kısmın adı",
+              "title": "Kitap Adi",
+              "type": "string"
+            },
+            "kisim_no": {
+              "description": "Kanun metni içerisinde kısım olarak ayrılmış kısmın numarası",
+              "title": "Kisim No",
+              "type": "integer"
+            },
+            "kisim_adi": {
+              "description": "Kanun metni içerisinde kısım olarak ayrılmış kısmın adı",
+              "title": "Kisim Adi",
+              "type": "string"
+            },
+            "bolum_no": {
+              "description": "Kanun metni içerisinde bölüm olarak ayrılmış kısmın numarası",
+              "title": "Bolum No",
+              "type": "integer"
+            },
+            "bolum_adi": {
+              "description": "Kanun metni içerisinde bölüm olarak ayrılmış kısmın adı",
+              "title": "Bolum Adi",
+              "type": "string"
+            },
+            "statu": {
+              "description": "Maddenin güncel durumu",
+              "title": "Statu",
+              "type": "string"
+            },
+            "referanslar": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Referanslar",
+              "type": "array"
+            },
+            "category": {
+              "description": "Maddenin kategorisi",
+              "title": "Category",
+              "type": "string"
+            },
+            "tags": {
+              "description": "Maddenin etiketleri",
+              "items": {
+                "type": "string"
+              },
+              "title": "Tags",
+              "type": "array"
+            }
+          },
+          "required": [
+            "madde_no",
+            "madde_basligi",
+            "madde_metni",
+            "madde_ozeti",
+            "madde_amac",
+            "kitap_no",
+            "kitap_adi",
+            "kisim_no",
+            "kisim_adi",
+            "bolum_no",
+            "bolum_adi",
+            "statu",
+            "referanslar",
+            "category",
+            "tags"
+          ],
+          "title": "TurkCezaKanunMaddeleri",
+          "type": "object"
+        },
+        "title": "Maddeler",
+        "type": "array"
+      },
+    "required": [
+      "kanun_adi",
+      "kanun_numarasi",
+      "resmi_gazete_yayin_tarihi",
+      "maddeler"
+    ],
+    "title": "TurkCezaKanunu",
+    "type": "object"
+}

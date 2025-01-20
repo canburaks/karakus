@@ -31,10 +31,18 @@ sync:
 	@echo "Linting code..."
 	uv sync
 
-purge:
-	@echo "Purging code..."
-	uv run ruff clean
-
 add:
 	@echo "Adding dependencies..."
 	uv run ruff add 
+
+langflow:
+	@echo "Running langflow..."
+	uv pip install langflow && uv run langflow run
+
+clean:
+	@echo "Cleaning cache files..."
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	uv run ruff clean
+

@@ -1,0 +1,58 @@
+{
+    "kanun_adi": "TÜRK CEZA KANUNU",
+    "kanun_numarasi": 5237,
+    "resmi_gazete_yayin_tarihi": "12/10/2004",
+    "maddeler": [
+        {
+            "madde_no": 130,
+            "madde_basligi": "(1) Bir kimsenin öldükten sonra hatırasına en az üç kişiyle ihtilat ederek",
+            "madde_metni": "",
+            "madde_ozeti": null,
+            "madde_amac": null,
+            "kitap_no": null,
+            "kitap_adi": null,
+            "kisim_adi": null,
+            "kisim_no": null,
+            "bolum_no": null,
+            "bolum_adi": null,
+            "statu": "Yürürlükte",
+            "referans_maddeler": [],
+            "category": null,
+            "tags": []
+        },
+        {
+            "madde_no": 157,
+            "madde_basligi": "(1) Hileli davranışlarla bir kimseyi aldatıp, onun veya başkasının zararına",
+            "madde_metni": "",
+            "madde_ozeti": null,
+            "madde_amac": null,
+            "kitap_no": null,
+            "kitap_adi": null,
+            "kisim_adi": null,
+            "kisim_no": null,
+            "bolum_no": null,
+            "bolum_adi": null,
+            "statu": "Yürürlükte",
+            "referans_maddeler": [],
+            "category": null,
+            "tags": []
+        },
+        {
+            "madde_no": 248,
+            "madde_basligi": "(1) Soruşturma başlamadan önce, zimmete geçirilen malın aynen iade",
+            "madde_metni": "",
+            "madde_ozeti": null,
+            "madde_amac": null,
+            "kitap_no": null,
+            "kitap_adi": null,
+            "kisim_adi": null,
+            "kisim_no": null,
+            "bolum_no": null,
+            "bolum_adi": null,
+            "statu": "Yürürlükte",
+            "referans_maddeler": [],
+            "category": null,
+            "tags": []
+        }
+    ]
+}

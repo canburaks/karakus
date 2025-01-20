@@ -16,6 +16,29 @@ dependencies = [
     "huggingface-hub>=0.27.1",
     "openai>=1.59.6",
     "markitdown>=0.0.1a3",
+    "unstructured[all-docs,local-inference]>=0.10.30",
+    "nltk==3.8.1",
+    "certifi>=2024.12.14",
+    "gotrue>=2.11.1",
+    "supabase>=2.11.0",
+    "unstructured-ingest>=0.3.15",
+    "sqlalchemy[asyncio]>=2.0.37",
+    "qdrant-client>=1.13.0",
+    "pypdf2>=3.0.1",
+    "aiosqlite>=0.20.0",
+    "pymilvus>=2.5.3",
+    "asyncio>=3.4.3",
+    "langchain-ollama>=0.2.2",
+    "langchain-openai>=0.3.0",
+    "langchain-google-vertexai>=2.0.7",
+    "langchain-google-genai>=2.0.9",
+    "langchain-unstructured>=0.1.6",
+    "langchain-community>=0.3.14",
+    "ollama>=0.4.6",
+    "google-cloud-aiplatform>=1.38",
+    "langgraph>=0.2.64",
+    "langsmith>=0.2.11",
+    "pydantic-ai>=0.0.19",
 ]
 
 [dependency-groups]
@@ -42,6 +65,19 @@ line-length = 88
 docstring-code-format = true
 docstring-code-line-length = 20
 exclude = [".venv"]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+
 
 
 [tool.isort]
@@ -69,7 +105,7 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-log_file = "static/assets/logs/tests.log"
+log_file = "./static/assets/logs/tests.log"
 console_output_style = "count"
 filterwarnings = [
     "ignore::DeprecationWarning",

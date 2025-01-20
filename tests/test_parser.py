@@ -1,11 +1,8 @@
 import os
 import sys
-from unittest.mock import AsyncMock, Mock, patch
 
-import httpx
-import numpy as np
 import pytest
-from fastapi import FastAPI, File, UploadFile
+from fastapi import UploadFile
 
 sys.path.append("./static/assets/test_files")
 from pathlib import Path
