@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.services.supabase import get_supabase_service
+from api.services.supabase import get_supabase_client, get_auth_service
 
 from ..core.logger import log
 from ..models.auth import (
@@ -21,7 +21,7 @@ router = APIRouter(
 
 @router.post("/signup", response_model=AuthResponse)
 async def sign_up(
-    request: SignUpRequest, client=Depends(get_supabase_service)
+    request: SignUpRequest, client=Depends(get_auth_service)
 ) -> AuthResponse:
     try:
         return client.client.auth.sign_up(
@@ -37,7 +37,7 @@ async def sign_up(
 
 @router.post("/signin", response_model=AuthResponse)
 async def sign_in(
-    request: SignInRequest, client=Depends(dependency=get_supabase_service)
+    request: SignInRequest, client=Depends(dependency=get_auth_service)
 ) -> AuthResponse:
     try:
         response = client.client.auth.sign_in_with_password(
@@ -50,7 +50,7 @@ async def sign_in(
 
 
 @router.post("/signout")
-async def sign_out(client=Depends(dependency=get_supabase_service)):
+async def sign_out(client=Depends(dependency=get_auth_service)):
     try:
         await client.client.auth.sign_out()
         return {"message": "Successfully signed out"}
@@ -60,7 +60,7 @@ async def sign_out(client=Depends(dependency=get_supabase_service)):
 
 @router.post("/reset-password")
 async def reset_password(
-    request: ResetPasswordRequest, client=Depends(dependency=get_supabase_service)
+    request: ResetPasswordRequest, client=Depends(dependency=get_auth_service)
 ):
     try:
         await client.client.auth.reset_password_for_email(request.email)
@@ -70,7 +70,7 @@ async def reset_password(
 
 
 @router.get("/user", response_model=SupabaseUser)
-async def get_user(client=Depends(dependency=get_supabase_service)) -> SupabaseUser:
+async def get_user(client=Depends(dependency=get_auth_service)) -> SupabaseUser:
     try:
         user = await client.client.auth.get_user()
         return user

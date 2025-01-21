@@ -136,7 +136,7 @@ class WebSourceConnector(SourceConnector):
                     raise e
         raise Exception("Failed to fetch URL after maximum retries")
 
-    async def extract(self) -> AsyncGenerator[Element, None]:
+    async def extract(self) -> AsyncGenerator[Element, None]: # type: ignore
         """
         Extract content from web sources.
 

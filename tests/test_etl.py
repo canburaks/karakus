@@ -20,7 +20,7 @@ from api.services.etl.extract import (
 from api.services.etl.partitioning import (
     PartitionHTMLConfig,
     PartitionPDFConfig,
-    partition_html_file,
+    partition_html_from_url,
     partition_pdf_file,
 )
 from api.services.langchain.langchain_ollama import OllamaService
@@ -123,7 +123,7 @@ class TestETL(unittest.TestCase):
         self.file_path = Path(SAMPLE_PDF)
         self.cleaner = TextCleaner(options=CleaningOptions())
         # self.file_content: List[Element] = partition_pdf_file(PartitionPDFConfig(filename=SAMPLE_PDF))
-        self.file_content: List[Element] = partition_html_file(
+        self.file_content: List[Element] = partition_html_from_url(
             PartitionHTMLConfig(url=SAMPLE_PDF_URL)
         )
 
@@ -173,7 +173,7 @@ class TestETL(unittest.TestCase):
     def test_extract_from_html(self):
         """Test document extraction from url."""
         log.info(f"\n\nTest document extraction from url.")
-        file_content: List[Element] = partition_html_file(
+        file_content: List[Element] = partition_html_from_url(
             PartitionHTMLConfig(url=SAMPLE_PDF_URL)
         )
         self.print_elements(file_content)

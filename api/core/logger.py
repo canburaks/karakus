@@ -2,6 +2,7 @@ import logging
 
 from rich import print
 from rich.logging import RichHandler
+from api.core.constants import LOG_FILE_PATH
 
 FORMAT = "%(message)s"
 rich_handler = RichHandler(
@@ -13,7 +14,13 @@ rich_handler = RichHandler(
 )
 
 logging.basicConfig(
-    level="INFO", format=FORMAT, datefmt="[%X]", handlers=[rich_handler]
+    level="INFO",
+    format=FORMAT,
+    datefmt="[%X]",
+    handlers=[
+        rich_handler,
+        logging.FileHandler(filename=LOG_FILE_PATH, mode="a"),
+    ],
 )
 
 # Configure logging for uvicorn access logs
