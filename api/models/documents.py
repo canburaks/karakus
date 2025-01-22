@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
-from typing import Annotated, List
-from pydantic_extra_types.language_code import LanguageAlpha2
 from enum import Enum
+from typing import Annotated, List
+
+from pydantic import BaseModel, Field
+from pydantic_extra_types.language_code import LanguageAlpha2
 
 
 class YasalBelgeTipi(Enum):
@@ -13,26 +14,28 @@ class YasalBelgeTipi(Enum):
     CB_GENELGE = "Cumhurbaşkanliği Genelgeleri̇"
     KHK = "Kanun Hükmünde Kararnameler"
     TUZUK = "Tüzükler"
-    KURUM_KURULUS_VE_UNIVERSITE_YONETMELIK = "Kurum, Kuruluş Ve Üni̇versi̇te Yönetmeli̇kleri̇"
+    KURUM_KURULUS_VE_UNIVERSITE_YONETMELIK = (
+        "Kurum, Kuruluş Ve Üni̇versi̇te Yönetmeli̇kleri̇"
+    )
     TEBLIG = "Teblig"
     RESMI_GAZETE = "Resmi Gazete"
     AM_BIREYSEL_BASVURU_KARAR = "Anayasa Bireysel Basvuru Kararlari̇"
     AM_KARAR = "Anayasa Kararlari̇"
     YARGITAY_EMSAL_KARAR = "Yargıtay Emsal Kararlari̇"
     MEVZUAT = "Mevzuat"
-    
+
 
 class YasalBelgeMaddesi(BaseModel):
     """Türkiye Cumhuriyeti Yasal Belgesinin içerisinde yer alan tekil maddeler"""
 
     madde_no: int = Field(..., description="Yasal maddenin numarası")
-    
+
     madde_basligi: str = Field(..., description="Yasal maddenin ait olduğu başlık")
-    
+
     madde_metni: str = Field(..., description="Yasal maddenin metni")
-    
+
     madde_ozeti: str = Field(..., description="Yasal maddenin subjectif özeti")
-    
+
     madde_amac: str = Field(..., description="Yasal maddenin belirtilmiş amacı")
 
     kitap_no: int = Field(
@@ -88,13 +91,17 @@ class YasalBelge(BaseModel):
     """Türkiye Cumhuriyeti Yasal Belgesi"""
 
     belge_adi: str = Field(..., description="Yasal belgenin adı")
-    belge_dili: LanguageAlpha2 = Field(default=LanguageAlpha2("tr"), description="Yasal belgenin dili")	
+    belge_dili: LanguageAlpha2 = Field(
+        default=LanguageAlpha2("tr"), description="Yasal belgenin dili"
+    )
     belge_numarasi: int = Field(..., description="Yasal belge numarası")
     belge_tipi: YasalBelgeTipi = Field(..., description="Yasal belgenin tipi")
     resmi_gazete_yayin_tarihi: str = Field(
         ..., description="Yasal belgenin resmi gazete yayın tarihi"
     )
-    maddeler: List[YasalBelgeMaddesi] = Field(..., description="Yasal belgenin içerisinde yer alan maddelerin tümü")
+    maddeler: List[YasalBelgeMaddesi] = Field(
+        ..., description="Yasal belgenin içerisinde yer alan maddelerin tümü"
+    )
     category: str = Field(..., description="Yasal belge kategorisi")
     tags: List[str] = Field(..., description="Yasal belge etiketleri")
 
@@ -111,4 +118,3 @@ class YasalBelge(BaseModel):
                 "tags": ["ceza", "hukuk"],
             }
         }
-

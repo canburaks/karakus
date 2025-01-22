@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.services.supabase import get_supabase_client, get_auth_service
+from api.services.supabase import get_auth_service, get_supabase_client
 
 from ..core.logger import log
 from ..models.auth import (

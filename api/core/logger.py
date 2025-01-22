@@ -2,6 +2,7 @@ import logging
 
 from rich import print
 from rich.logging import RichHandler
+
 from api.core.constants import LOG_FILE_PATH
 
 FORMAT = "%(message)s"

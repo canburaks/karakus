@@ -4,10 +4,10 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
+from .core.method_test import method_test
 from .middlewares.api_error_middleware import APIErrorMiddleware
 from .routers import auth_router, users_router
 from .routers.ai import router as ai_router
-from .core.method_test import method_test
 
 app = FastAPI()
 
@@ -44,5 +44,4 @@ if __name__ == "__main__":
         reload_dirs=["api/"],
         reload_excludes=[".venv/*"],
         timeout_keep_alive=300,  # Keep-alive timeout in seconds
-
     )

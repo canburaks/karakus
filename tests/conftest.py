@@ -1,20 +1,27 @@
-import pytest
 from typing import AsyncGenerator
+
+import pytest
+
 from api.core.config import get_app_settings
-from api.services.supabase.supabase_storage_service import SupabaseStorage
 from api.services.supabase.config import get_supabase_settings
+from api.services.supabase.supabase_storage_service import SupabaseStorage
+
 
 @pytest.fixture
 def app_settings():
     return get_app_settings()
+
 
 @pytest.fixture
 async def storage_service() -> AsyncGenerator[SupabaseStorage, None]:
     """Create a test storage service instance"""
     yield SupabaseStorage()
 
+
 @pytest.fixture(autouse=True)
-async def cleanup_storage(storage_service: SupabaseStorage) -> AsyncGenerator[None, None]:
+async def cleanup_storage(
+    storage_service: SupabaseStorage,
+) -> AsyncGenerator[None, None]:
     """Cleanup any test buckets after each test"""
     yield
     try:
@@ -23,4 +30,4 @@ async def cleanup_storage(storage_service: SupabaseStorage) -> AsyncGenerator[No
             if bucket["name"].startswith("test-"):
                 await storage_service.delete_bucket(bucket["name"])
     except Exception as e:
-        print(f"Cleanup error: {str(e)}") 
+        print(f"Cleanup error: {str(e)}")

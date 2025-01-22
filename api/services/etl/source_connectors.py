@@ -82,7 +82,7 @@ class FileSourceConnector(SourceConnector):
 
         return sorted(files)
 
-    async def extract(self) -> AsyncGenerator[Element, None]: # type: ignore
+    async def extract(self) -> AsyncGenerator[Element, None]:  # type: ignore
         """
         Extract content from files.
 
@@ -136,7 +136,7 @@ class WebSourceConnector(SourceConnector):
                     raise e
         raise Exception("Failed to fetch URL after maximum retries")
 
-    async def extract(self) -> AsyncGenerator[Element, None]: # type: ignore
+    async def extract(self) -> AsyncGenerator[Element, None]:  # type: ignore
         """
         Extract content from web sources.
 

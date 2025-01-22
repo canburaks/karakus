@@ -1,11 +1,12 @@
 from enum import Enum
 from typing import Optional, Type
+
 from supabase import Client, create_client
 
 from api.interfaces.storage_service import StorageService
-from api.services.supabase.supabase_storage_service import SupabaseStorage
-from api.services.supabase.supabase_client import SupabaseClient
 from api.services.supabase.config import get_supabase_settings
+from api.services.supabase.supabase_client import SupabaseClient
+from api.services.supabase.supabase_storage_service import SupabaseStorage
 
 
 class StorageProvider(str, Enum):
@@ -50,14 +51,13 @@ class StorageClient:
         if not cls._instance:
             if not cls._provider:
                 cls.initialize()
-            
+
             if cls._provider == StorageProvider.SUPABASE:
                 # Initialize Supabase client if not exists
                 if not cls._supabase_client:
                     settings = get_supabase_settings()
                     cls._supabase_client = create_client(
-                        settings.SUPABASE_URL,
-                        settings.SUPABASE_KEY
+                        settings.SUPABASE_URL, settings.SUPABASE_KEY
                     )
                 cls._instance = SupabaseStorage(cls._supabase_client)
             # Add more provider initializations here
@@ -65,10 +65,10 @@ class StorageClient:
             #     cls._instance = AWSS3Storage()
             else:
                 raise ValueError(f"Unsupported storage provider: {cls._provider}")
-        
+
         if not cls._instance:
             raise ValueError("Failed to initialize storage service")
-            
+
         return cls._instance
 
 

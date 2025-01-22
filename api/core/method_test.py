@@ -1,20 +1,18 @@
-from fastapi import Request, Depends
+import os
+import tempfile
 from pathlib import Path
-from typing import Dict, Any, Callable, Awaitable
-from api.services.etl.partitioning import (
-    partition_auto,
-    PartitionAutoConfig,
-)
+from typing import Any, Awaitable, Callable, Dict
+
+from fastapi import Depends, Request
+
+from api.core.constants import PDF_DOWNLOAD_PATH
 from api.core.logger import log
-from api.utils.pdf_downloader import download_pdf
 from api.core.storage import StorageClient
 from api.interfaces.storage_service import StorageService
-from api.services.llama_index.llama_index_service import get_llama_index_service
 from api.models.documents import YasalBelge
-from api.core.constants import PDF_DOWNLOAD_PATH
-import tempfile
-import os
-
+from api.services.etl.partitioning import PartitionAutoConfig, partition_auto
+from api.services.llama_index.llama_index_service import get_llama_index_service
+from api.utils.pdf_downloader import download_pdf
 
 SAMPLE_PDF_URL = "https://www.resmigazete.gov.tr/eskiler/2023/01/20230102.pdf"
 SAMPLE_HTML_URL = "https://www.meb.gov.tr/mevzuat/liste.php?ara=6"
@@ -29,18 +27,17 @@ async def method_test(request: Request) -> Dict[str, Any]:
 
 async def method_llama_index_s3_load(request: Request) -> Dict[str, Any]:
     storage = StorageClient.get_instance()
-    
+
     # Download file bytes from Supabase
     file_bytes = await storage.download_file(
-        bucket_name=STORAGE_BUCKET, 
-        file_path=STORED_PDF_PATH
+        bucket_name=STORAGE_BUCKET, file_path=STORED_PDF_PATH
     )
-    
+
     # Create a temporary file with .pdf extension
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
         temp_file.write(file_bytes)
         temp_path = temp_file.name
-    
+
     try:
         llama_index_service = get_llama_index_service()
         pdf_loader_documents = llama_index_service.read_files(
@@ -50,32 +47,32 @@ async def method_llama_index_s3_load(request: Request) -> Dict[str, Any]:
             filename_as_id=True,
             required_exts=None,
             file_metadata=None,
-            num_workers=1  # Reduce worker count to prevent timeouts
+            num_workers=1,  # Reduce worker count to prevent timeouts
         )
-        
+
         doc_text = "\n\n".join([doc.text for doc in pdf_loader_documents])
         log.info(f"Processing document text of length: {len(doc_text)}")
 
         sllm = llama_index_service.get_sllm(
-            provider="ollama",
-            model="qwen2.5:7b",
-            schema=YasalBelge
+            provider="ollama", model="qwen2.5:7b", schema=YasalBelge
         )
-        
+
         try:
             log.info("Attempting to extract structured information...")
             structured_response = sllm(doc_text)
             log.info("Successfully extracted structured information")
-            log.debug(f"Structured response: {structured_response.model_dump_json(indent=2)}")
-            
+            log.debug(
+                f"Structured response: {structured_response.model_dump_json(indent=2)}"
+            )
+
             # Clean up the temporary file
             os.unlink(temp_path)
             log.info("Cleaned up temporary file")
-            
+
             return {
-                "message": "Success", 
-                "documents": pdf_loader_documents, 
-                "structured_response": structured_response.model_dump()
+                "message": "Success",
+                "documents": pdf_loader_documents,
+                "structured_response": structured_response.model_dump(),
             }
         except Exception as e:
             log.error(f"Error in structured output: {str(e)}")

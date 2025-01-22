@@ -1,18 +1,19 @@
-from typing import Optional, List, Dict, Any, Callable, Type
-from api.core.logger import log
-from api.services.llama_index.config import get_llama_index_settings
-from llama_index.core import SimpleDirectoryReader
-from llama_index.core import Document
+import json
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Type
+
+from llama_index.core import Document, SimpleDirectoryReader
+from llama_index.core.llms.llm import LLM
 from llama_index.llms.ollama import Ollama
 from pydantic import BaseModel
-from llama_index.core.llms.llm import LLM
-import json
+
+from api.core.logger import log
+from api.services.llama_index.config import get_llama_index_settings
 
 
 class LlamaIndexService:
     """Service for interacting with LlamaIndex"""
-    
+
     def __init__(self) -> None:
         self.settings = get_llama_index_settings()
         print(self.settings)
@@ -20,14 +21,14 @@ class LlamaIndexService:
         log.info("Initialized LlamaIndex service")
 
     def read_files(
-        self, 
+        self,
         input_files: List[str],
         recursive: bool = False,
         encoding: str = "utf-8",
         filename_as_id: bool = True,
         required_exts: Optional[List[str]] = None,
         file_metadata: Optional[Callable[[str], Dict[str, Any]]] = None,
-        num_workers: int = 4
+        num_workers: int = 4,
     ) -> List[Document]:
         """Read specific files using SimpleDirectoryReader"""
         try:
@@ -37,7 +38,7 @@ class LlamaIndexService:
                 encoding=encoding,
                 filename_as_id=filename_as_id,
                 required_exts=required_exts,
-                file_metadata=file_metadata
+                file_metadata=file_metadata,
             )
             return reader.load_data(num_workers=num_workers)
         except Exception as e:
@@ -54,7 +55,7 @@ class LlamaIndexService:
         encoding: str = "utf-8",
         filename_as_id: bool = True,
         file_metadata: Optional[Callable[[str], Dict[str, Any]]] = None,
-        num_workers: int = 4
+        num_workers: int = 4,
     ) -> List[Document]:
         """Read files from a directory using SimpleDirectoryReader"""
         try:
@@ -66,7 +67,7 @@ class LlamaIndexService:
                 num_files_limit=num_files_limit,
                 encoding=encoding,
                 filename_as_id=filename_as_id,
-                file_metadata=file_metadata
+                file_metadata=file_metadata,
             )
             return reader.load_data(num_workers=num_workers)
         except Exception as e:
@@ -82,7 +83,7 @@ class LlamaIndexService:
         num_files_limit: Optional[int] = None,
         encoding: str = "utf-8",
         filename_as_id: bool = True,
-        file_metadata: Optional[Callable[[str], Dict[str, Any]]] = None
+        file_metadata: Optional[Callable[[str], Dict[str, Any]]] = None,
     ):
         """Iterate over files in a directory using SimpleDirectoryReader"""
         try:
@@ -94,7 +95,7 @@ class LlamaIndexService:
                 num_files_limit=num_files_limit,
                 encoding=encoding,
                 filename_as_id=filename_as_id,
-                file_metadata=file_metadata
+                file_metadata=file_metadata,
             )
             return reader.iter_data()
         except Exception as e:
@@ -106,19 +107,19 @@ class LlamaIndexService:
         provider = kwargs.get("provider")
         model = kwargs.get("model")
         request_timeout = kwargs.get("request_timeout", 120000)
-    
+
         if not isinstance(provider, str):
             raise ValueError("Provider is required and must be a string")
         if not isinstance(model, str):
             raise ValueError("Model is required and must be a string")
-        
+
         if provider == "ollama":
             return Ollama(
                 model=model,
                 request_timeout=request_timeout,
                 temperature=0.1,
                 stop=["</s>", "Human:", "Assistant:"],
-                format="json"
+                format="json",
             )
         raise ValueError("Provider is not supported")
 
@@ -129,7 +130,7 @@ class LlamaIndexService:
 
         if not (isinstance(schema_cls, type) and issubclass(schema_cls, BaseModel)):
             raise ValueError("Schema must be a Pydantic BaseModel class")
-        
+
         schema_json = schema_cls.model_json_schema()
         prompt = (
             "You are a precise JSON extractor. Extract information from the text below into a JSON object "
@@ -138,7 +139,7 @@ class LlamaIndexService:
             "Text: {text}\n\n"
             "JSON output:"
         )
-        
+
         def process_text(text: str) -> Any:
             response = llm.complete(prompt.format(text=text))
             try:
@@ -149,23 +150,24 @@ class LlamaIndexService:
                 if json_str.endswith("```"):
                     json_str = json_str.rsplit("```", 1)[0]
                 json_str = json_str.strip()
-                
+
                 # Parse and validate with Pydantic
                 return schema_cls.model_validate_json(json_str)
             except Exception as e:
                 log.error(f"Failed to parse JSON response: {e}")
                 log.error(f"Raw response: {response.text}")
                 raise ValueError(f"Failed to parse structured output: {e}")
-            
+
         return process_text
 
 
 # Global instance
 _llama_index_instance: Optional[LlamaIndexService] = None
 
+
 def get_llama_index_service() -> LlamaIndexService:
     """Get or create a LlamaIndex service instance"""
     global _llama_index_instance
     if _llama_index_instance is None:
         _llama_index_instance = LlamaIndexService()
-    return _llama_index_instance 
+    return _llama_index_instance

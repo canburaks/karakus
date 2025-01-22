@@ -1,9 +1,9 @@
+import inspect
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, TypeVar, Awaitable, Union, cast
+from typing import Any, Awaitable, Callable, TypeVar, Union, cast
 from urllib.parse import urlparse
-import inspect
 
 import aiofiles
 import httpx
@@ -11,13 +11,13 @@ from fastapi import HTTPException, status
 
 from api.core.logger import log
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 async def download_and_process(
     url: str,
     callback: Union[Callable[[Path], T], Callable[[Path], Awaitable[T]]],
-    chunk_size: int = 8192
+    chunk_size: int = 8192,
 ) -> T:
     """
     Download a file to a temporary location and process it with a callback.
@@ -42,8 +42,7 @@ async def download_and_process(
     except Exception as e:
         log.error(f"Invalid URL {url}: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid URL provided"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid URL provided"
         )
 
     # Create temporary file
@@ -58,11 +57,11 @@ async def download_and_process(
             response = await client.get(url)
             log.info(f"Response status: {response.status_code}")
             response.raise_for_status()
-            
+
             # Write content to file
             content = response.content
             log.info(f"Downloaded content size: {len(content)} bytes")
-            with open(temp_path, 'wb') as f:
+            with open(temp_path, "wb") as f:
                 f.write(content)
             log.info(f"Content written to {temp_path}")
 
@@ -78,13 +77,13 @@ async def download_and_process(
         log.error(f"Failed to download file from {url}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to download file: {str(e)}"
+            detail=f"Failed to download file: {str(e)}",
         )
     except Exception as e:
         log.error(f"Error processing file from {url}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing file: {str(e)}"
+            detail=f"Error processing file: {str(e)}",
         )
     finally:
         # Cleanup

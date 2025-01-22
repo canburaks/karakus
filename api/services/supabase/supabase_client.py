@@ -15,6 +15,7 @@ class SupabaseClient:
     access to Supabase services. This is a singleton class that
     ensures only one client instance exists.
     """
+
     _instance = None
     client: Client
 
@@ -24,7 +25,7 @@ class SupabaseClient:
         return cls._instance
 
     def __init__(self, settings: SupabaseSettings):
-        if not hasattr(self, 'client'):
+        if not hasattr(self, "client"):
             try:
                 self.client = create_client(
                     supabase_url=settings.SUPABASE_URL,
@@ -33,8 +34,8 @@ class SupabaseClient:
                         schema="public",
                         headers={},
                         auto_refresh_token=True,
-                        persist_session=True
-                    )
+                        persist_session=True,
+                    ),
                 )
                 log.info("Supabase client initialized successfully")
             except Exception as e:
@@ -64,10 +65,10 @@ class SupabaseClient:
 
 @lru_cache()
 def get_supabase_client(
-    settings: SupabaseSettings = Depends(get_supabase_settings)
+    settings: SupabaseSettings = Depends(get_supabase_settings),
 ) -> SupabaseClient:
     """
     Get or create the Supabase client instance.
     This is a FastAPI dependency that ensures only one client exists.
     """
-    return SupabaseClient(settings) 
+    return SupabaseClient(settings)

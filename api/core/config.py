@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Literal
+
 from pydantic_settings import BaseSettings
 
 
@@ -9,8 +10,7 @@ class AppSettings(BaseSettings):
     BUCKET_REGION: str = ""
     BUCKET_ACCESS_ID: str = ""
     BUCKET_SECRET_KEY: str = ""
-    
-			
+
     class Config:
         env_file: str = ".env"
         extra: str = "allow"

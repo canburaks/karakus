@@ -133,7 +133,7 @@ class OllamaService(BaseLangChainService):
         response = await self.llm.agenerate([langchain_messages], **generation_kwargs)
         return response.generations[0][0].text.strip()
 
-    async def stream_chat_response( # type: ignore
+    async def stream_chat_response(  # type: ignore
         self,
         messages: List[Dict[str, str]],
         max_tokens: Optional[int] = None,
@@ -164,7 +164,7 @@ class OllamaService(BaseLangChainService):
                     if isinstance(item, str):
                         yield item
 
-    async def generate_structured_output( # type: ignore
+    async def generate_structured_output(  # type: ignore
         self,
         message: str,
         output_schema: Type[T],

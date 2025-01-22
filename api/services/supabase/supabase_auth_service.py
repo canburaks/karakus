@@ -1,9 +1,14 @@
 from typing import Any, Dict, Optional, cast
+
 from fastapi import Depends, status
 from gotrue.errors import AuthError as SupabaseAuthError
 from gotrue.types import (
-    AuthResponse, User, UserResponse, AdminUserAttributes,
-    UserAttributes, VerifyOtpParams
+    AdminUserAttributes,
+    AuthResponse,
+    User,
+    UserAttributes,
+    UserResponse,
+    VerifyOtpParams,
 )
 from pydantic import EmailStr
 
@@ -34,22 +39,24 @@ class SupabaseAuthService(AuthService):
             Dict[str, Any]: Authentication response with user and session
         """
         try:
-            response = self.client.auth.sign_up({
-                "email": email,
-                "password": password,
-                "options": {"data": kwargs} if kwargs else {}
-            })
+            response = self.client.auth.sign_up(
+                {
+                    "email": email,
+                    "password": password,
+                    "options": {"data": kwargs} if kwargs else {},
+                }
+            )
             session = cast(AuthResponse, response).session
             return {
                 "access_token": session.access_token if session else None,
                 "refresh_token": session.refresh_token if session else None,
-                "expires_in": session.expires_in if session else None
+                "expires_in": session.expires_in if session else None,
             }
         except SupabaseAuthError as e:
             log.error(f"Failed to sign up user {email}: {str(e)}")
             raise AuthError(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Registration failed: {str(e)}"
+                detail=f"Registration failed: {str(e)}",
             )
 
     async def sign_in(self, email: str, password: str) -> Dict[str, Any]:
@@ -64,21 +71,19 @@ class SupabaseAuthService(AuthService):
             Dict[str, Any]: Authentication response with user and session
         """
         try:
-            response = self.client.auth.sign_in_with_password({
-                "email": email,
-                "password": password
-            })
+            response = self.client.auth.sign_in_with_password(
+                {"email": email, "password": password}
+            )
             session = cast(AuthResponse, response).session
             return {
                 "access_token": session.access_token if session else None,
                 "refresh_token": session.refresh_token if session else None,
-                "expires_in": session.expires_in if session else None
+                "expires_in": session.expires_in if session else None,
             }
         except SupabaseAuthError as e:
             log.error(f"Failed to sign in user {email}: {str(e)}")
             raise AuthError(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
 
     async def sign_out(self, access_token: str) -> Dict[str, Any]:
@@ -90,7 +95,7 @@ class SupabaseAuthService(AuthService):
             log.error(f"Failed to sign out: {str(e)}")
             raise AuthError(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Sign out failed: {str(e)}"
+                detail=f"Sign out failed: {str(e)}",
             )
 
     async def get_current_user(self, access_token: str) -> Dict[str, Any]:
@@ -98,24 +103,26 @@ class SupabaseAuthService(AuthService):
         try:
             session = self.client.auth.get_session()
             user = cast(AuthResponse, session).user
-            return {
-                "id": user.id,
-                "email": user.email,
-                "phone": user.phone,
-                "created_at": user.created_at,
-                "updated_at": user.updated_at
-            } if user else {}
+            return (
+                {
+                    "id": user.id,
+                    "email": user.email,
+                    "phone": user.phone,
+                    "created_at": user.created_at,
+                    "updated_at": user.updated_at,
+                }
+                if user
+                else {}
+            )
         except SupabaseAuthError as e:
             log.error(f"Failed to get current user: {str(e)}")
             raise AuthError(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired session"
+                detail="Invalid or expired session",
             )
 
     async def update_user(
-        self,
-        access_token: str,
-        attributes: Dict[str, Any]
+        self, access_token: str, attributes: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Update user data.
@@ -131,18 +138,22 @@ class SupabaseAuthService(AuthService):
             user_attrs = UserAttributes(**attributes)
             response = self.client.auth.update_user(user_attrs)
             user = cast(AuthResponse, response).user
-            return {
-                "id": user.id,
-                "email": user.email,
-                "phone": user.phone,
-                "created_at": user.created_at,
-                "updated_at": user.updated_at
-            } if user else {}
+            return (
+                {
+                    "id": user.id,
+                    "email": user.email,
+                    "phone": user.phone,
+                    "created_at": user.created_at,
+                    "updated_at": user.updated_at,
+                }
+                if user
+                else {}
+            )
         except SupabaseAuthError as e:
             log.error(f"Failed to update user: {str(e)}")
             raise AuthError(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to update user: {str(e)}"
+                detail=f"Failed to update user: {str(e)}",
             )
 
     async def delete_user(self, access_token: str) -> Dict[str, Any]:
@@ -162,14 +173,13 @@ class SupabaseAuthService(AuthService):
                 self.client.auth.admin.delete_user(user.id)
                 return {"message": "User successfully deleted"}
             raise AuthError(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
         except SupabaseAuthError as e:
             log.error(f"Failed to delete user: {str(e)}")
             raise AuthError(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to delete user: {str(e)}"
+                detail=f"Failed to delete user: {str(e)}",
             )
 
     async def reset_password(self, email: str) -> Dict[str, Any]:
@@ -189,7 +199,7 @@ class SupabaseAuthService(AuthService):
             log.error(f"Failed to send reset password email: {str(e)}")
             raise AuthError(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to send reset password email: {str(e)}"
+                detail=f"Failed to send reset password email: {str(e)}",
             )
 
     async def verify_email(self, access_token: str) -> Dict[str, Any]:
@@ -209,13 +219,13 @@ class SupabaseAuthService(AuthService):
             return {
                 "access_token": session.access_token if session else None,
                 "refresh_token": session.refresh_token if session else None,
-                "expires_in": session.expires_in if session else None
+                "expires_in": session.expires_in if session else None,
             }
         except SupabaseAuthError as e:
             log.error(f"Failed to verify email: {str(e)}")
             raise AuthError(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to verify email: {str(e)}"
+                detail=f"Failed to verify email: {str(e)}",
             )
 
     async def refresh_session(self, refresh_token: str) -> Dict[str, Any]:
@@ -234,13 +244,12 @@ class SupabaseAuthService(AuthService):
             return {
                 "access_token": session.access_token if session else None,
                 "refresh_token": session.refresh_token if session else None,
-                "expires_in": session.expires_in if session else None
+                "expires_in": session.expires_in if session else None,
             }
         except SupabaseAuthError as e:
             log.error(f"Failed to refresh session: {str(e)}")
             raise AuthError(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
             )
 
 
@@ -249,7 +258,7 @@ _auth_instance = None
 
 
 async def get_auth_service(
-    client: SupabaseClient = Depends(get_supabase_client)
+    client: SupabaseClient = Depends(get_supabase_client),
 ) -> SupabaseAuthService:
     """
     Get or create the auth service instance.
@@ -258,4 +267,4 @@ async def get_auth_service(
     global _auth_instance
     if _auth_instance is None:
         _auth_instance = SupabaseAuthService(client)
-    return _auth_instance 
+    return _auth_instance
