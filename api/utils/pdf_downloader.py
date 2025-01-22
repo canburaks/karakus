@@ -32,10 +32,10 @@ async def download_pdf(
     
     # Configure client with longer timeouts and redirects
     timeout = httpx.Timeout(
-        connect=60.0,  # connection timeout
+        connect=600.0,  # connection timeout
         read=300.0,    # read timeout
-        write=60.0,    # write timeout
-        pool=60.0      # pool timeout
+        write=600.0,    # write timeout
+        pool=600.0      # pool timeout
     )
     
     async with httpx.AsyncClient(

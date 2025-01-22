@@ -82,7 +82,7 @@ class FileSourceConnector(SourceConnector):
 
         return sorted(files)
 
-    async def extract(self) -> AsyncGenerator[Element, None]:
+    async def extract(self) -> AsyncGenerator[Element, None]: # type: ignore
         """
         Extract content from files.
 

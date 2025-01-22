@@ -1,16 +1,21 @@
 from io import BufferedReader, FileIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict, Union, cast
-from fastapi import Depends, status
-from supabase import StorageException
+from fastapi import status
+from supabase import Client, StorageException, create_client
+from supabase.lib.client_options import SyncClientOptions
+from concurrent.futures import ThreadPoolExecutor
 
 from api.core.logger import log
 from api.interfaces.storage_service import StorageService, StorageError
-from api.services.supabase.supabase_client import SupabaseClient, get_supabase_client
-
+from api.services.supabase.config import get_supabase_settings
+from api.utils.slugify import slugify
+from api.utils.threadpool import run_in_threadpool
 
 class FileOptions(TypedDict, total=False):
     contentType: str
+    # Add other storage options as needed
+    upsert: Optional[bool]
 
 
 class SupabaseStorage(StorageService):
@@ -21,70 +26,58 @@ class SupabaseStorage(StorageService):
     in Supabase Storage buckets.
     
     Attributes:
-        client (SupabaseClient): Supabase client instance
+        base_url (str): Base URL of the Supabase instance
+        key (str): API key for authentication
+        headers (dict): Headers for authentication
     """
 
-    def __init__(self, client: SupabaseClient):
-        self.client = client
+    client: Client
+
+    def __init__(self, client: Optional[Client] = None) -> None:
+        settings = get_supabase_settings()
+        if client is not None:
+            self.client = client
+        else:
+            self.client = create_client(
+                settings.SUPABASE_URL,
+                settings.SUPABASE_KEY,
+                options=SyncClientOptions(schema="public")
+            )
+        log.info(f"Initialized Supabase storage with URL: {settings.SUPABASE_URL}")
 
     async def create_bucket(self, bucket_name: str, **kwargs) -> Dict[str, Any]:
-        """
-        Create a new storage bucket.
-
-        Args:
-            bucket_name (str): Name of the bucket to create
-            is_public (bool): Whether the bucket should be public
-
-        Returns:
-            Dict[str, Any]: Created bucket information
-        """
+        """Create a storage bucket"""
         try:
-            is_public = kwargs.get('is_public', False)
-            result = self.client.storage.create_bucket(bucket_name, options={"public": is_public})
+            is_public = bool(kwargs.get('is_public', False))
+            result = await run_in_threadpool(
+                self.client.storage.create_bucket,
+                id=slugify(bucket_name),
+                name=bucket_name,
+                options={"public": is_public}
+            )
             return cast(Dict[str, Any], result)
         except StorageException as e:
-            log.error(f"Bucket creation failed: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Bucket creation failed: {str(e)}"
-            )
+            log.error(f"Failed to create bucket: {str(e)}")
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     async def list_buckets(self) -> List[Dict[str, Any]]:
-        """
-        List all storage buckets.
-
-        Returns:
-            List[Dict[str, Any]]: List of buckets
-        """
+        """List all storage buckets"""
         try:
-            result = self.client.storage.list_buckets()
+            result = await run_in_threadpool(self.client.storage.list_buckets)
             return cast(List[Dict[str, Any]], result)
         except StorageException as e:
-            log.error(f"Failed to list buckets: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to list buckets: {str(e)}"
-            )
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     async def delete_bucket(self, bucket_name: str) -> Dict[str, Any]:
-        """
-        Delete a storage bucket.
-
-        Args:
-            bucket_name (str): Name of the bucket to delete
-
-        Returns:
-            Dict[str, Any]: Response data
-        """
+        """Delete a storage bucket"""
         try:
-            result = self.client.storage.delete_bucket(bucket_name)
+            result = await run_in_threadpool(
+                self.client.storage.delete_bucket,
+                bucket_name
+            )
             return cast(Dict[str, Any], result)
         except StorageException as e:
-            log.error(f"Failed to delete bucket {bucket_name}: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to delete bucket: {str(e)}"
-            )
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     async def upload_file(
         self,
@@ -93,94 +86,57 @@ class SupabaseStorage(StorageService):
         file: Union[BufferedReader, bytes, FileIO, str, Path],
         **kwargs
     ) -> Dict[str, Any]:
-        """
-        Upload a file to a storage bucket.
-
-        Args:
-            bucket_name (str): Target bucket name
-            file_path (str): Path where the file will be stored
-            file (Union[BufferedReader, bytes, FileIO, str, Path]): File to upload
-            content_type (Optional[str]): Content type of the file
-
-        Returns:
-            Dict[str, Any]: Upload response data
-        """
+        """Upload a file to storage"""
         try:
-            file_options: Any = {"content-type": kwargs.get('content_type')} if kwargs.get('content_type') else None
-            result = self.client.storage.from_(bucket_name).upload(
+            log.info(f"Attempting to upload file to bucket: {bucket_name}, path: {file_path}")
+            
+            file_options: Dict[str, Any] = {}
+            if content_type := kwargs.get('content_type'):
+                file_options['contentType'] = content_type
+            
+            bucket = self.client.storage.from_(bucket_name)
+            result = await run_in_threadpool(
+                bucket.upload,
                 path=file_path,
                 file=file,
                 file_options=file_options
             )
+            log.info(f"Upload successful: {result}")
             return cast(Dict[str, Any], result)
         except StorageException as e:
-            log.error(f"Failed to upload file to {bucket_name}/{file_path}: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to upload file: {str(e)}"
-            )
+            log.error(f"Failed to upload file: {str(e)}")
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     async def download_file(self, bucket_name: str, file_path: str) -> bytes:
-        """
-        Download a file from a storage bucket.
-
-        Args:
-            bucket_name (str): Source bucket name
-            file_path (str): Path to the file
-
-        Returns:
-            bytes: File content
-        """
+        """Download a file from storage"""
         try:
-            return self.client.storage.from_(bucket_name).download(file_path)
-        except StorageException as e:
-            log.error(f"Failed to download file from {bucket_name}/{file_path}: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to download file: {str(e)}"
+            result = await run_in_threadpool(
+                self.client.storage.from_(bucket_name).download,
+                file_path
             )
+            return cast(bytes, result)
+        except StorageException as e:
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     async def list_files(self, bucket_name: str, path: Optional[str] = None) -> List[Dict[str, Any]]:
-        """
-        List files in a storage bucket.
-
-        Args:
-            bucket_name (str): Target bucket name
-            path (Optional[str]): Path prefix to filter files
-
-        Returns:
-            List[Dict[str, Any]]: List of files
-        """
+        """List files in a bucket"""
         try:
-            result = self.client.storage.from_(bucket_name).list(path)
+            bucket = self.client.storage.from_(bucket_name)
+            result = await run_in_threadpool(bucket.list, path=path) if path else await run_in_threadpool(bucket.list)
             return cast(List[Dict[str, Any]], result)
         except StorageException as e:
-            log.error(f"Failed to list files in {bucket_name}: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to list files: {str(e)}"
-            )
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     async def delete_file(self, bucket_name: str, file_paths: List[str]) -> Dict[str, Any]:
-        """
-        Delete files from a storage bucket.
-
-        Args:
-            bucket_name (str): Target bucket name
-            file_paths (List[str]): Paths of files to delete
-
-        Returns:
-            Dict[str, Any]: Deletion response data
-        """
+        """Delete files from storage"""
         try:
-            result = self.client.storage.from_(bucket_name).remove(file_paths)
+            result = await run_in_threadpool(
+                self.client.storage.from_(bucket_name).remove,
+                file_paths
+            )
             return cast(Dict[str, Any], result)
         except StorageException as e:
-            log.error(f"Failed to delete files from {bucket_name}: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to delete files: {str(e)}"
-            )
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     async def move_file(
         self,
@@ -188,79 +144,41 @@ class SupabaseStorage(StorageService):
         source_path: str,
         destination_path: str
     ) -> Dict[str, Any]:
-        """
-        Move/rename a file within a storage bucket.
-
-        Args:
-            bucket_name (str): Target bucket name
-            source_path (str): Current file path
-            destination_path (str): New file path
-
-        Returns:
-            Dict[str, Any]: Move response data
-        """
+        """Move/rename a file within storage"""
         try:
-            result = self.client.storage.from_(bucket_name).move(
+            result = await run_in_threadpool(
+                self.client.storage.from_(bucket_name).move,
                 source_path,
                 destination_path
             )
             return cast(Dict[str, Any], result)
         except StorageException as e:
-            log.error(f"Failed to move file in {bucket_name}: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to move file: {str(e)}"
-            )
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    async def create_signed_url(
-        self,
-        bucket_name: str,
-        file_path: str,
-        **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Create a signed URL for temporary file access.
-
-        Args:
-            bucket_name (str): Target bucket name
-            file_path (str): Path to the file
-            expires_in (int): URL expiration time in seconds
-
-        Returns:
-            Dict[str, Any]: Signed URL data
-        """
+    async def create_signed_url(self, bucket_name: str, file_path: str, **kwargs) -> Dict[str, Any]:
+        """Generate a signed URL for temporary access"""
         try:
-            expires_in = kwargs.get('expires_in', 3600)
-            result = self.client.storage.from_(bucket_name).create_signed_url(
+            expires_in = int(kwargs.get('expires_in', 3600))
+            result = await run_in_threadpool(
+                self.client.storage.from_(bucket_name).create_signed_url,
                 file_path,
                 expires_in
             )
             return cast(Dict[str, Any], result)
         except StorageException as e:
-            log.error(f"Failed to create signed URL for {bucket_name}/{file_path}: {str(e)}")
-            raise StorageError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to create signed URL: {str(e)}"
-            )
+            log.error(f"Failed to create signed URL: {str(e)}")
+            raise StorageError(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Global instance
-_storage_instance = None
+_storage_instance: Optional[SupabaseStorage] = None
 
-
-async def get_storage_service(
-    client: SupabaseClient = Depends(get_supabase_client)
-) -> SupabaseStorage:
+def get_storage_service() -> SupabaseStorage:
     """
-    Get or create a SupabaseStorage service instance.
-
-    Args:
-        client (SupabaseClient): Supabase client instance
-
-    Returns:
-        SupabaseStorage: Storage service instance
+    Get or create a storage service instance.
+    This is a FastAPI dependency that ensures only one service exists.
     """
     global _storage_instance
     if _storage_instance is None:
-        _storage_instance = SupabaseStorage(client)
+        _storage_instance = SupabaseStorage()
     return _storage_instance 

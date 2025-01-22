@@ -42,4 +42,7 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload_dirs=["api/"],
+        reload_excludes=[".venv/*"],
+        timeout_keep_alive=300,  # Keep-alive timeout in seconds
+
     )

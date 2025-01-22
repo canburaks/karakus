@@ -6,6 +6,9 @@ from pydantic_settings import BaseSettings
 class AppSettings(BaseSettings):
     ENV: Literal["dev", "prod"] = "dev"
     BUCKET_NAME: str = ""
+    BUCKET_REGION: str = ""
+    BUCKET_ACCESS_ID: str = ""
+    BUCKET_SECRET_KEY: str = ""
     
 			
     class Config:

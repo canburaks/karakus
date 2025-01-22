@@ -37,9 +37,9 @@ async def parse_pdf(file: UploadFile) -> str:
                 )
         finally:
             # Clean up the temporary file
-            log.info(f"PDF content: {result.text_content[:100]}")
+            log.info(f"PDF content: {result.text_content[:100]}") # type: ignore
             os.unlink(temp_path)
-            return result.text_content
+            return result.text_content # type: ignore
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
