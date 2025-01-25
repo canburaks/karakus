@@ -11,7 +11,7 @@ class APIErrorMiddleware(BaseHTTPMiddleware):
         log.info(f"Request received: {request}")
         try:
             response = await call_next(request)
-            log.info(f"Middleware: Response sent: {dir(response)}")
+            log.info(f"Middleware: Response sent")
             return response
         except httpx.HTTPError as e:
             log.error(f"Middleware: HTTP error occurred: {str(e)}")

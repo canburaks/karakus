@@ -1,17 +1,22 @@
-import json
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union, Sequence
 
 import httpx
+import json
+import asyncio
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from pydantic import BaseModel, Field
+import uuid
+from datetime import datetime
 
 from api.core.logger import log
+from api.models.ai import ChatMessage, ChatResponse, Message, Role
+from api.interfaces.llm_service import LLMService
 from api.services.ollama.config import MODEL_CONFIGS, OllamaConfig, OllamaModel
+from api.services.ollama.config import get_ollama_settings
 
 
 class OllamaOptions(BaseModel):
     """Model options for Ollama requests."""
-
     num_keep: Optional[int] = None
     seed: Optional[int] = None
     num_predict: Optional[int] = None
@@ -47,7 +52,6 @@ class OllamaOptions(BaseModel):
 
 class ModelDetails(BaseModel):
     """Model details from process status."""
-
     model: str
     digest: str
     size: int
@@ -58,62 +62,178 @@ class ModelDetails(BaseModel):
 
 class ProcessResponse(BaseModel):
     """Response from process status."""
-
     models: List[ModelDetails]
 
 
-class ToolCall(BaseModel):
-    """Tool call information."""
-
-    id: str = Field(..., description="Unique identifier for the tool call")
-    name: str = Field(..., description="Name of the tool being called")
-    arguments: Dict[str, Any] = Field(..., description="Arguments for the tool call")
-
-
-class ChatMessage(BaseModel):
-    """Chat message with optional tool calls."""
-
-    role: str
-    content: str
-    tool_calls: Optional[List[ToolCall]] = None
-    name: Optional[str] = None
-
-
-class ChatResponse(BaseModel):
-    """Response from chat endpoint."""
-
-    model: str
-    created_at: str
-    message: ChatMessage
-    done: bool
-    total_duration: Optional[int] = None
-    load_duration: Optional[int] = None
-    prompt_eval_count: Optional[int] = None
-    prompt_eval_duration: Optional[int] = None
-    eval_count: Optional[int] = None
-    eval_duration: Optional[int] = None
-
-
-class OllamaService:
-    """
-    Service for interacting with Ollama's API, providing access to local LLM models.
-
-    Handles chat completions, embeddings generation, and model management with support for streaming.
-
-    Attributes:
-        client (httpx.AsyncClient): Async client for API requests
-        default_model (OllamaModel): Default model to use for requests
-    """
-
-    def __init__(self, config: OllamaConfig):
+class OllamaService(LLMService):
+    def __init__(self, config: OllamaConfig = get_ollama_settings()):
+        log.info(f"Initializing Ollama service with base URL: {config.base_url}")
+        self.config = config
         self.client = httpx.AsyncClient(
-            base_url=config.base_url,
+            base_url=self.config.base_url,
             headers={"Content-Type": "application/json"},
-            timeout=httpx.Timeout(
-                12000.0, connect=60.0
-            ),  # 5 minutes total timeout, 60s connect timeout
+            timeout=httpx.Timeout(12000.0, connect=60.0),
         )
-        self.default_model = config.default_model
+        self.default_model = self.config.default_model
+
+    def generate_text(
+        self,
+        messages: Sequence[ChatMessage],
+        **kwargs: Any
+    ) -> ChatResponse:
+        """Synchronous chat completion"""
+        model = kwargs.get("model", self.default_model)
+        log.debug(f"Generating text with model {model}")
+        try:
+            with httpx.Client(
+                base_url=self.client.base_url,
+                headers=self.client.headers,
+                timeout=self.client.timeout
+            ) as client:
+                response = client.post(
+                    "/api/chat",
+                    json={
+                        "model": model,
+                        "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
+                        "stream": False
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
+                content = data.get("message", {}).get("content", "")
+                return ChatResponse(
+                    id=f"chatcmpl-{uuid.uuid4().hex}",
+                    object="chat.completion",
+                    created=int(datetime.now().timestamp()),
+                    model=str(model),
+                    choices=[{
+                        "index": 0,
+                        "message": {"role": "assistant", "content": content},
+                        "finish_reason": "stop"
+                    }],
+                    usage={"prompt_tokens": 0, "completion_tokens": data.get("total_tokens", 0), "total_tokens": data.get("total_tokens", 0)}
+                )
+        except Exception as e:
+            log.error(f"Text generation failed: {str(e)}", exc_info=True)
+            raise
+
+    async def _async_generate_text(
+        self,
+        messages: Sequence[ChatMessage],
+        **kwargs: Any
+    ) -> ChatResponse:
+        """Internal async implementation of generate_text"""
+        response = await self.chat(
+            messages=[{"role": msg.role, "content": msg.content} for msg in messages],
+            model=kwargs.get("model", self.default_model),
+            stream=False
+        )
+        if isinstance(response, dict):
+            content = response.get("message", {}).get("content", "")
+            return ChatResponse(
+                id=f"chatcmpl-{uuid.uuid4().hex}",
+                object="chat.completion",
+                created=int(datetime.now().timestamp()),
+                model=str(kwargs.get("model", self.default_model)),
+                choices=[{
+                    "index": 0,
+                    "message": {"role": "assistant", "content": content},
+                    "finish_reason": "stop"
+                }],
+                usage={"prompt_tokens": 0, "completion_tokens": response.get("total_tokens", 0), "total_tokens": response.get("total_tokens", 0)}
+            )
+        return ChatResponse(
+            id=f"chatcmpl-{uuid.uuid4().hex}",
+            object="chat.completion",
+            created=int(datetime.now().timestamp()),
+            model=str(kwargs.get("model", self.default_model)),
+            choices=[{
+                "index": 0,
+                "message": {"role": "assistant", "content": ""},
+                "finish_reason": "stop"
+            }],
+            usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        )
+
+    async def stream_text(
+        self,
+        messages: Sequence[ChatMessage],
+        **kwargs: Any
+    ) -> AsyncGenerator[str, None]:
+        """Asynchronous streaming chat completion"""
+        generator = await self.chat(
+            messages=[{"role": msg.role, "content": msg.content} for msg in messages],
+            model=kwargs.get("model", self.default_model),
+            stream=True
+        )
+        if isinstance(generator, AsyncGenerator):
+            async for chunk in generator:
+                yield chunk
+
+    def generate_object(self, prompt: str, **kwargs: Any) -> List[str]:
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            response = loop.run_until_complete(self._async_generate_object(prompt, **kwargs))
+            return response
+        finally:
+            loop.close()
+
+    async def _async_generate_object(self, prompt: str, **kwargs: Any) -> List[str]:
+        response = await self.chat(
+            messages=[{"role": "user", "content": prompt}],
+            model=kwargs.get("model", self.default_model),
+            format="json",
+            stream=False
+        )
+        if isinstance(response, dict):
+            return [response.get("message", {}).get("content", "")]
+        return []
+
+    async def stream_object(self, prompt: str, **kwargs: Any) -> List[str]:
+        response = await self._async_generate_object(prompt, **kwargs)
+        return response
+
+    def get_embeddings(
+        self,
+        texts: Union[str, List[str]],
+        **kwargs: Any
+    ) -> List[List[float]]:
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            response = loop.run_until_complete(self._async_get_embeddings(texts, **kwargs))
+            return response
+        finally:
+            loop.close()
+
+    async def _async_get_embeddings(
+        self,
+        texts: Union[str, List[str]],
+        **kwargs: Any
+    ) -> List[List[float]]:
+        if isinstance(texts, str):
+            texts = [texts]
+        return await self.create_embeddings(texts=texts, model=kwargs.get("model"))
+
+    async def aget_embeddings(
+        self,
+        texts: Union[str, List[str]],
+        **kwargs: Any
+    ) -> List[List[float]]:
+        return await self._async_get_embeddings(texts, **kwargs)
+
+    def get_available_models(self) -> List[str]:
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            models = loop.run_until_complete(self.list_models())
+            return [model["name"] for model in models]
+        finally:
+            loop.close()
 
     async def create_embeddings(
         self, texts: List[str], model: Optional[OllamaModel] = None
@@ -132,17 +252,22 @@ class OllamaService:
             httpx.HTTPError: If API request fails
         """
         selected_model = model or self.default_model
-        embeddings = []
-
-        for text in texts:
-            response = await self.client.post(
-                "/api/embeddings",
-                json={"model": selected_model, "prompt": text},
-            )
-            response.raise_for_status()
-            embeddings.append(response.json()["embedding"])
-
-        return embeddings
+        log.debug(f"Generating embeddings for {len(texts)} texts using model {selected_model}")
+        try:
+            embeddings = []
+            for i, text in enumerate(texts):
+                response = await self.client.post(
+                    "/api/embeddings",
+                    json={"model": selected_model, "prompt": text},
+                )
+                response.raise_for_status()
+                embeddings.append(response.json()["embedding"])
+                log.debug(f"Generated embedding {i+1}/{len(texts)}")
+            log.debug(f"Successfully generated all embeddings with dimensions: {len(embeddings)}x{len(embeddings[0])}")
+            return embeddings
+        except Exception as e:
+            log.error(f"Failed to generate embeddings: {str(e)}", exc_info=True)
+            raise
 
     async def generate(
         self,
@@ -206,7 +331,7 @@ class OllamaService:
 
     async def chat(
         self,
-        messages: List[ChatCompletionMessageParam],
+        messages: List[Dict[str, Any]],
         model: Optional[OllamaModel] = None,
         stream: bool = True,
         format: Optional[str] = None,
@@ -218,7 +343,7 @@ class OllamaService:
         Chat with the model using a list of messages.
 
         Args:
-            messages (List[ChatCompletionMessageParam]): Chat messages
+            messages (List[Dict[str, Any]]): Chat messages
             model (Optional[OllamaModel]): Model to use
             stream (bool): Whether to stream the response
             format (Optional[str]): Response format (e.g., 'json')
@@ -232,25 +357,12 @@ class OllamaService:
         Raises:
             httpx.HTTPError: If API request fails
         """
+        selected_model = model or self.default_model
+        log.debug(f"Starting chat with model {selected_model}, {len(messages)} messages")
         try:
-            selected_model = model or self.default_model
-
-            # Convert messages to Ollama format
-            formatted_messages = []
-            for msg in messages:
-                role = (
-                    "system"
-                    if msg.get("role") == "system"
-                    else "user"
-                    if msg.get("role") == "user"
-                    else "assistant"
-                )
-                content = msg.get("content", "")
-                formatted_messages.append({"role": role, "content": content})
-
             payload = {
                 "model": selected_model,
-                "messages": formatted_messages,
+                "messages": messages,
                 "stream": stream,
             }
 
@@ -269,6 +381,7 @@ class OllamaService:
             if not stream:
                 response = await self.client.post("/api/chat", json=payload)
                 response.raise_for_status()
+                log.debug(f"Chat completed successfully with model {selected_model}")
                 return ChatResponse(**response.json())
 
             async def response_generator() -> AsyncGenerator[str, None]:
@@ -290,12 +403,13 @@ class OllamaService:
                         except json.JSONDecodeError:
                             continue
 
+            log.debug(f"Chat completed successfully with model {selected_model}")
             return response_generator()
         except httpx.RequestError as e:
             log.error(f"Request error occurred: {str(e)}")
             raise
         except Exception as e:
-            log.error(f"Unexpected error in chat: {str(e)}")
+            log.error(f"Chat failed with model {selected_model}: {str(e)}", exc_info=True)
             raise
 
     async def pull_model(self, model: str) -> AsyncGenerator[str, None]:
@@ -441,7 +555,7 @@ class OllamaService:
 _ollama_instance = None
 
 
-def get_ollama_service(config: OllamaConfig) -> OllamaService:
+def get_ollama_service(config: OllamaConfig = get_ollama_settings()) -> OllamaService:
     """
     Get or create a singleton instance of OllamaService.
 
@@ -453,5 +567,5 @@ def get_ollama_service(config: OllamaConfig) -> OllamaService:
     """
     global _ollama_instance
     if _ollama_instance is None:
-        _ollama_instance = OllamaService(config)
+        _ollama_instance = OllamaService()
     return _ollama_instance

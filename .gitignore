@@ -25,4 +25,5 @@ uv.lock
 **/logs/*
 *.log
 .cursortasks
+.cursor
 .vscode

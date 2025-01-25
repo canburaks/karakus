@@ -1,0 +1,12 @@
+# @name Chat Completions
+POST http://localhost:8000/ai/chat/completions
+Content-Type: application/json
+
+{
+  "model": "gpt-4",
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "temperature": 0.7,
+  "stream": true
+}

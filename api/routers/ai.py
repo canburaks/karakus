@@ -1,9 +1,10 @@
 import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Union
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 
 from api.core.parser import parse_pdf, read_text_file
 from api.models.ai import (
@@ -14,7 +15,10 @@ from api.models.ai import (
     Message,
     Role,
 )
-from api.services.openrouter import get_openrouter_service
+from api.core.llm import openrouter_llm, ollama_llm
+from api.core.logger import log
+from api.interfaces.llm_service import LLMService
+from typing import cast
 
 router = APIRouter(
     prefix="/ai",
@@ -23,111 +27,99 @@ router = APIRouter(
 )
 
 
-async def process_file_content(file: UploadFile) -> str:
-    """Process uploaded file content and return as string."""
-    try:
-        if file.content_type == "application/pdf":
-            return await parse_pdf(file)
-        else:
-            return await read_text_file(file)
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be text-based")
-
-
 @router.post("/chat/completions", response_model=ChatResponse)
 async def create_chat_completion(
     request: ChatRequest,
-    file: Optional[UploadFile] = File(None),
-    openrouter_service=Depends(get_openrouter_service),
-):
-    """Create a chat completion with optional file input."""
-    messages = request.messages
-
-    if file:
-        file_content = await process_file_content(file)
-        messages.append(
-            Message(role=Role.USER, content=f"Content from file: {file_content}")
-        )
-
+    llm_service: LLMService = Depends(openrouter_llm),
+) -> Union[ChatResponse, StreamingResponse]:
+    """OpenAI-compatible chat completion endpoint"""
     try:
-        response = await openrouter_service.stream_chat(
-            messages=[msg.model_dump() for msg in messages],
+        log.info(f"\n\nRequest: {request.__dict__}")
+        if request.stream:
+            return StreamingResponse(
+                llm_service.stream_text(
+                    messages=request.messages,
+                    model=request.model,
+                    temperature=request.temperature,
+                    max_tokens=request.max_tokens,
+                ),
+                media_type="text/event-stream",
+            )
+
+        response = llm_service.generate_text(
+            messages=request.messages,
             model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
         )
+        return response
 
-        # Collect all chunks
-        content = ""
-        async for chunk in response:
-            if chunk.startswith("0:"):
-                content += json.loads(chunk[2:])
-
-        return ChatResponse(
-            id=f"chatcmpl-{datetime.now().timestamp()}",
-            model=request.model or "default",
-            created=int(datetime.now().timestamp()),
-            choices=[{"message": {"role": "assistant", "content": content}}],
-            usage={"total_tokens": len(content.split())},  # Approximate
+    except HTTPException as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail={
+                "error": {
+                    "message": e.detail,
+                    "type": "invalid_request_error",
+                    "code": e.status_code,
+                }
+            },
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/chat/stream")
 async def stream_chat_completion(
     request: ChatRequest,
-    file: Optional[UploadFile] = File(None),
-    openrouter_service=Depends(get_openrouter_service),
+    llm_service=Depends(openrouter_llm),
 ):
-    """Stream a chat completion with optional file input."""
-    messages = request.messages
-
-    if file:
-        file_content = await process_file_content(file)
-        messages.append(
-            Message(role=Role.USER, content=f"Content from file: {file_content}")
-        )
-
+    """Stream a chat completion."""
     try:
         return StreamingResponse(
-            openrouter_service.stream_chat(
-                messages=[msg.model_dump() for msg in messages],
+            llm_service.stream_text(
+                messages=request.messages,
                 model=request.model,
+                temperature=request.temperature,
+                max_tokens=request.max_tokens,
             ),
             media_type="text/event-stream",
         )
     except Exception as e:
+        log.error(f"Chat streaming failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/embeddings", response_model=EmbeddingResponse)
 async def create_embeddings(
-    file: Optional[UploadFile] = File(None),
-    text: Optional[str] = Form(None),
-    model: str = Form("openai/text-embedding-3-small"),
-    openrouter_service=Depends(get_openrouter_service),
-):
-    """Create embeddings from text or file input."""
-    if not file and not text:
-        raise HTTPException(
-            status_code=400, detail="Either file or text must be provided"
-        )
-
+    request: EmbeddingRequest,
+    llm_service: LLMService = Depends(openrouter_llm),
+) -> EmbeddingResponse:
+    """OpenAI-compatible embeddings endpoint"""
     try:
-        if file:
-            input_text = await process_file_content(file)
-        elif text:
-            input_text = text
-        else:
-            raise HTTPException(status_code=400, detail="No input provided")
-
-        embeddings = await openrouter_service.create_embeddings(
-            texts=[input_text], model=model
+        embeddings = await llm_service.aget_embeddings(
+            texts=request.input if isinstance(request.input, list) else [request.input],
+            model=request.model or "openai/text-embedding-3-small",
         )
-
         return EmbeddingResponse(
-            model=model,
-            data=embeddings,
-            usage={"total_tokens": len(input_text.split())},  # Approximate
+            object="list",
+            data=[
+                {
+                    "object": "embedding",
+                    "embedding": [float(x) for x in emb],
+                    "index": i,
+                }
+                for i, emb in enumerate(embeddings)
+            ],
+            model=request.model or "openai/text-embedding-3-small",
+            usage={"prompt_tokens": 0, "total_tokens": 0},
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": {
+                    "message": str(e),
+                    "type": "api_error",
+                    "code": "internal_error",
+                }
+            },
+        )

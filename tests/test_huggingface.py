@@ -19,19 +19,16 @@ from api.services.huggingface import (
 
 @pytest.fixture
 def service() -> HuggingFaceService:
-    return get_huggingface_service(
-        config=get_huggingface_settings(
-            # api_key=os.getenv("HUGGINGFACE_API_KEY"),
-            # base_url=os.getenv("HUGGINGFACE_BASE_URL"),
-            # default_model=os.getenv("HUGGINGFACE_LOCAL_MODEL"),
-            use_local=True,
-            default_model=SentenceTransformerModel.MINI_LM_L12_V2,
-        )
+    settings = get_huggingface_settings(
+        use_local=True,
+        default_model=SentenceTransformerModel.MINI_LM_L12_V2,
     )
+    return get_huggingface_service(settings) # type: ignore
 
 
-def test_sentence_transformer(service: HuggingFaceService):
-    result = service.get_sentence_embeddings("This is a test sentence.")
+@pytest.mark.asyncio
+async def test_sentence_transformer(service: HuggingFaceService):
+    result = await service.get_sentence_embeddings(["This is a test sentence."])
     log.info(f"\n\nSentence transformer result: {result}")
     assert result is not None
     assert len(result) > 0
